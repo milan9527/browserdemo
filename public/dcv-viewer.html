@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DCV Live View</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    #dcv-container { width: 100%; height: 100%; position: relative; }
+    #dcv-display { position: absolute; top: 0; left: 0; }
+    #status { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+              color: #888; font-family: system-ui, sans-serif; font-size: 14px; text-align: center; z-index: 10; }
+    #error { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+             color: #f44; font-family: system-ui, sans-serif; font-size: 14px; text-align: center;
+             display: none; max-width: 80%; z-index: 10; }
+  </style>
+</head>
+<body>
+  <div id="dcv-container"></div>
+  <div id="status">Connecting to DCV stream...</div>
+  <div id="error"></div>
+
+  <script src="/nice-dcv-web-client-sdk/dcvjs-umd/dcv.js"></script>
+  <script>
+    var REMOTE_WIDTH = 1920;
+    var REMOTE_HEIGHT = 1080;
+
+    var params = new URLSearchParams(window.location.search);
+    var signedUrl = params.get("url");
+
+    if (!signedUrl) {
+      showError("No signed URL provided");
+    } else {
+      // Extract the SigV4 query params from the signed URL
+      var signedUrlObj = new URL(signedUrl);
+      var sigv4Params = signedUrlObj.searchParams;
+
+      // The httpExtraSearchParams callback appends SigV4 params to every HTTP/WS request
+      function getExtraParams() {
+        return sigv4Params;
+      }
+
+      dcv.setLogLevel(dcv.LogLevel.INFO);
+
+      dcv.authenticate(signedUrl, {
+        promptCredentials: function() {},
+        error: function(auth, error) {
+          showError("DCV auth error: " + (error.message || JSON.stringify(error)));
+        },
+        success: function(auth, result) {
+          var r = result[0] || {};
+          var sessionId = r.sessionId || "";
+          var authToken = r.authToken || "";
+
+          document.getElementById("status").textContent = "Authenticated, connecting...";
+
+          try {
+            dcv.connect({
+              url: signedUrl,
+              sessionId: sessionId,
+              authToken: authToken,
+              divId: "dcv-container",
+              callbacks: {
+                firstFrame: function() {
+                  document.getElementById("status").style.display = "none";
+                  applyScaling();
+                },
+                disconnect: function(reason) {
+                  showError("Disconnected: " + (reason || "unknown"));
+                },
+                error: function(error) {
+                  showError("Connection error: " + (error.message || JSON.stringify(error)));
+                }
+              },
+              // Pass SigV4 params on every request including WebSocket upgrade
+              httpExtraSearchParams: getExtraParams
+            });
+          } catch (e) {
+            showError("Connect error: " + e.message);
+          }
+        },
+        httpExtraSearchParams: getExtraParams
+      });
+    }
+
+    function showError(msg) {
+      document.getElementById("status").style.display = "none";
+      document.getElementById("error").style.display = "block";
+      document.getElementById("error").textContent = msg;
+    }
+
+    function applyScaling() {
+      var container = document.getElementById("dcv-container");
+      var display = document.getElementById("dcv-display");
+      if (!container || !display) return;
+
+      var cw = container.clientWidth;
+      var ch = container.clientHeight;
+      if (cw <= 0 || ch <= 0) return;
+
+      var scaleX = cw / REMOTE_WIDTH;
+      var scaleY = ch / REMOTE_HEIGHT;
+      var scale = Math.min(scaleX, scaleY);
+      var offsetX = (cw - REMOTE_WIDTH * scale) / 2;
+
+      display.style.width = REMOTE_WIDTH + "px";
+      display.style.height = REMOTE_HEIGHT + "px";
+      display.style.transformOrigin = "top left";
+      display.style.transform = "scale(" + scale + ")";
+      display.style.left = offsetX + "px";
+      display.style.top = "0";
+    }
+
+    window.addEventListener("resize", applyScaling);
+  </script>
+</body>
+</html>

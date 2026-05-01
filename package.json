@@ -1,0 +1,45 @@
+{
+  "name": "agentcore-browser-demo",
+  "version": "1.0.0",
+  "description": "Demo platform showcasing AgentCore Browser tool with DCV Live View — web crawling, user login, and persistent sessions",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "tsx watch server/index.ts",
+    "dev:client": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-agentcore": "^3.800.0",
+    "@aws-sdk/client-bedrock-agentcore-control": "^3.800.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.800.0",
+    "@aws-sdk/client-cloudwatch-logs": "^3.1039.0",
+    "@babel/runtime": "^7.29.2",
+    "@cloudscape-design/components": "^3.0.1286",
+    "@cloudscape-design/design-tokens": "^3.0.84",
+    "@cloudscape-design/global-styles": "^1.0.58",
+    "@fastify/cors": "^11.0.0",
+    "bedrock-agentcore": "^0.2.2",
+    "fastify": "^5.3.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.4",
+    "@types/node": "^25.6.0",
+    "@types/react": "^19.1.4",
+    "@types/react-dom": "^19.1.4",
+    "@vitejs/plugin-react": "^4.5.2",
+    "autoprefixer": "^10.4.21",
+    "concurrently": "^9.1.2",
+    "postcss": "^8.5.4",
+    "tailwindcss": "^4.1.8",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vite-plugin-static-copy": "^3.0.0"
+  }
+}
