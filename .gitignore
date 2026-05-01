@@ -3,5 +3,9 @@ dist/
 .env
 *.local
 .DS_Store
-.bedrock_agentcore
-.venv
+.bedrock_agentcore/
+.venv/
+agent/.venv/
+agent/.bedrock_agentcore/
+public/nice-dcv-web-client-sdk/
+/tmp/
