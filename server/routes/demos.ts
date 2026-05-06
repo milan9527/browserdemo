@@ -19,7 +19,7 @@ import { runBrowserAgent, type AgentStep } from "../lib/browser-agent.js";
 // In-memory job store
 // ---------------------------------------------------------------------------
 
-interface AgentJob {
+export interface AgentJob {
   id: string;
   status: "running" | "completed" | "error";
   steps: AgentStep[];
@@ -32,7 +32,7 @@ interface AgentJob {
   completedAt?: string;
 }
 
-const jobs = new Map<string, AgentJob>();
+export const jobs = new Map<string, AgentJob>();
 
 function generateJobId(): string {
   return `job-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -72,7 +72,7 @@ export function registerDemoRoutes(server: FastifyInstance) {
   /**
    * Phase 2: Start the agent asynchronously. Returns a jobId immediately.
    */
-  server.post<{ Body: { prompt: string; sessionId?: string; profileId?: string; browserIdentifier?: string } }>(
+  server.post<{ Body: { prompt: string; sessionId?: string; profileId?: string; browserIdentifier?: string; action?: string } }>(
     "/api/demos/run-agent",
     async (req) => {
       if (!req.body.prompt) {
@@ -88,8 +88,27 @@ export function registerDemoRoutes(server: FastifyInstance) {
       };
       jobs.set(jobId, job);
 
-      // Run agent in background — don't await
-      runAgentAsync(job, req.body.prompt, req.body.profileId, req.body.sessionId, req.body.browserIdentifier);
+      // Handle persistent session actions
+      const action = req.body.action;
+      let prompt = req.body.prompt;
+      let profileId = req.body.profileId;
+
+      if (action === "login-and-save") {
+        // Append instruction to save profile after login
+        prompt += '\n\nAfter successfully logging in, confirm you are on the secure page.';
+        // We'll save the profile after the agent completes (in runAgentAsync)
+      } else if (action === "resume-with-profile") {
+        // Use the demo profile — resolve the actual profile ID
+        try {
+          const { ensureDemoProfile } = await import("../lib/agentcore-browser.js");
+          profileId = await ensureDemoProfile();
+        } catch {
+          profileId = undefined;
+        }
+        prompt = 'Navigate to https://the-internet.herokuapp.com/secure and check if you are already logged in. Report what you see on the page.';
+      }
+
+      runAgentAsync(job, prompt, profileId, req.body.sessionId, req.body.browserIdentifier, action);
 
       return { jobId, status: "running" };
     }
@@ -128,7 +147,8 @@ async function runAgentAsync(
   prompt: string,
   profileId?: string,
   sessionId?: string,
-  browserIdentifier?: string
+  browserIdentifier?: string,
+  action?: string
 ) {
   try {
     // Poll CloudWatch logs for the agent's browser session ID in the background
@@ -192,6 +212,18 @@ async function runAgentAsync(
     job.agentMode = process.env.AGENT_MODE ?? "runtime";
     job.status = "completed";
     job.completedAt = new Date().toISOString();
+
+    // For "login-and-save" action, save the browser session to a profile
+    if (action === "login-and-save" && job.agentSessionId) {
+      try {
+        const { ensureDemoProfile, saveSessionProfile } = await import("../lib/agentcore-browser.js");
+        const profileIdentifier = await ensureDemoProfile();
+        await saveSessionProfile(job.agentSessionId, profileIdentifier, browserIdentifier);
+        job.answer = (job.answer ?? "") + "\n\n✅ Browser profile saved! Cookies and localStorage persisted. Click '2️⃣ Resume with Profile' to start a new session with the saved auth state.";
+      } catch (e: any) {
+        job.answer = (job.answer ?? "") + `\n\n⚠️ Profile save failed: ${e.message}`;
+      }
+    }
 
     // Terminate the browser session after a short delay (let frontend see final state)
     if (job.agentSessionId) {

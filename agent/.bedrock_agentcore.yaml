@@ -32,7 +32,7 @@ agents:
     bedrock_agentcore:
       agent_id: agentcorebrowserdemo-4TYLmV710D
       agent_arn: arn:aws:bedrock-agentcore:us-east-1:632930644527:runtime/agentcorebrowserdemo-4TYLmV710D
-      agent_session_id: a796eb30-ad6d-437f-8722-e06a8b08a282
+      agent_session_id: null
     codebuild:
       project_name: bedrock-agentcore-agentcorebrowserdemo-builder
       execution_role: arn:aws:iam::632930644527:role/AmazonBedrockAgentCoreSDKCodeBuild-us-east-1-966fc284bb

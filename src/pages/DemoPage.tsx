@@ -28,7 +28,7 @@ export default function DemoPage() {
   const [agentMode, setAgentMode] = useState<string | null>(null);
 
   const handleSubmit = useCallback(
-    async (prompt: string, browserIdentifier?: string) => {
+    async (prompt: string, browserIdentifier?: string, action?: string) => {
       setIsRunning(true);
       setSteps([]);
       setAnswer(null);
@@ -41,7 +41,7 @@ export default function DemoPage() {
         setSteps([{ timestamp: new Date().toISOString(), type: "thinking", text: "Invoking agent on AgentCore Runtime..." }]);
 
         // Start agent — it creates its own browser session
-        const { jobId } = await startDemoAgent(prompt, undefined, undefined, browserIdentifier);
+        const { jobId } = await startDemoAgent(prompt, undefined, undefined, browserIdentifier, action);
 
         // Poll for results — live view URL arrives when agent's session is detected
         let done = false;

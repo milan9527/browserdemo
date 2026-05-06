@@ -8,12 +8,6 @@ const navItems = [
     description: "Crawl & extract data",
   },
   {
-    label: "Auth Login",
-    to: "/demo/auth-login",
-    icon: "🔐",
-    description: "Authenticated browsing",
-  },
-  {
     label: "Persistent Session",
     to: "/demo/persistent-session",
     icon: "💾",
@@ -54,7 +48,7 @@ export default function Layout() {
           <p className="px-2 pt-2 pb-1 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
             Demo Scenarios
           </p>
-          {navItems.slice(0, 4).map((item) => (
+          {navItems.slice(0, 3).map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -77,7 +71,7 @@ export default function Layout() {
           <p className="px-2 pt-4 pb-1 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
             Management
           </p>
-          {navItems.slice(4).map((item) => (
+          {navItems.slice(3).map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

@@ -122,9 +122,10 @@ export function startDemoAgent(
   prompt: string,
   sessionId?: string,
   profileId?: string,
-  browserIdentifier?: string
+  browserIdentifier?: string,
+  action?: string
 ): Promise<{ jobId: string; status: string }> {
-  return post("/api/demos/run-agent", { prompt, sessionId, profileId, browserIdentifier });
+  return post("/api/demos/run-agent", { prompt, sessionId, profileId, browserIdentifier, action });
 }
 
 /** Poll for agent job results. */

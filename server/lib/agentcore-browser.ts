@@ -195,11 +195,15 @@ export async function listProfiles(): Promise<BrowserProfileInfo[]> {
   const res = await controlClient.send(
     new ListBrowserProfilesCommand({} as any)
   );
-  return ((res as any).browserProfiles ?? []).map((p: any) => ({
+  return ((res as any).profileSummaries ?? (res as any).browserProfiles ?? []).map((p: any) => ({
     profileId: p.profileId,
     name: p.name,
+    status: p.status,
     createdAt: p.createdAt,
-    updatedAt: p.updatedAt,
+    updatedAt: p.updatedAt ?? p.lastUpdatedAt,
+    lastSavedAt: p.lastSavedAt,
+    lastSavedBrowserSessionId: p.lastSavedBrowserSessionId,
+    lastSavedBrowserId: p.lastSavedBrowserId,
   }));
 }
 
@@ -259,7 +263,6 @@ export async function listBrowserSessions(browserIdentifier?: string): Promise<
         } as any)
       );
       const sessions = ((res as any).items ?? [])
-        .filter((s: any) => s.status === "READY" || s.status === "ACTIVE")
         .map((s: any) => ({
           sessionId: s.sessionId,
           status: s.status,
@@ -353,4 +356,55 @@ export async function stopBrowserSession(
     // Session may already be terminated
   }
   activeSessions.delete(sessionId);
+}
+
+
+// ---------------------------------------------------------------------------
+// Demo browser profile for persistent session
+// ---------------------------------------------------------------------------
+
+const DEMO_PROFILE_NAME = "demoPersistentProfile";
+let demoProfileId: string | null = null;
+
+/**
+ * Ensure the demo browser profile exists. Creates it if needed.
+ * Returns the profile identifier.
+ */
+export async function ensureDemoProfile(): Promise<string> {
+  if (demoProfileId) return demoProfileId;
+
+  // Check if it already exists
+  try {
+    const profiles = await listProfiles();
+    const existing = profiles.find((p) => p.name === DEMO_PROFILE_NAME);
+    if (existing) {
+      demoProfileId = existing.profileId;
+      return demoProfileId;
+    }
+  } catch {
+    // ignore
+  }
+
+  // Create it
+  const profile = await createProfile(DEMO_PROFILE_NAME);
+  demoProfileId = profile.profileId;
+  return demoProfileId;
+}
+
+/**
+ * Save a browser session's cookies/localStorage to a profile.
+ */
+export async function saveSessionProfile(
+  sessionId: string,
+  profileIdentifier: string,
+  browserIdentifier?: string
+): Promise<void> {
+  const bid = browserIdentifier ?? BROWSER_ID;
+  await dataClient.send(
+    new SaveBrowserSessionProfileCommand({
+      sessionId,
+      browserIdentifier: bid,
+      profileIdentifier,
+    } as any)
+  );
 }

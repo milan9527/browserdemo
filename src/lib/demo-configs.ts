@@ -15,6 +15,7 @@ export interface DemoConfig {
     description: string;
     prompt: string;
     browserIdentifier?: string;
+    action?: string;
   }[];
   codeSnippets: {
     title: string;
@@ -34,7 +35,7 @@ export const demoConfigs: Record<string, DemoConfig> = {
       "Web Bot Auth cryptographically signs HTTP requests so WAF vendors (Cloudflare, Akamai, HUMAN Security) " +
       "can verify the agent's identity. Sites that allow verified bots will reduce CAPTCHAs.",
     defaultPrompt:
-      "Navigate to https://www.linkedin.com/jobs/search/?keywords=software+engineer and read the job listings on the page.",
+      "Navigate to https://medium.com and search for AWS topics. Read the top results and summarize the key findings.",
     features: [
       "Web Bot Auth (IETF draft)",
       "Cloudflare / Akamai / HUMAN",
@@ -175,17 +176,30 @@ const result = JSON.parse(stdout);
     icon: "💾",
     description:
       "Browser profiles persist cookies and localStorage across sessions. " +
-      "Authenticate once, save the profile, and reuse it — the Strands agent " +
-      "on AgentCore Runtime picks up where it left off without re-login.",
+      "Step 1: Login and save the profile. Step 2: Start a new session with the saved profile — already logged in, no credentials needed.",
     defaultPrompt:
-      "Check if the browser session has an active login. If logged in, confirm the persistent " +
-      "session is working and describe the current page. If not, log in with username " +
-      '"tomsmith" and password "SuperSecretPassword!" at https://the-internet.herokuapp.com/login.',
+      'Navigate to https://the-internet.herokuapp.com/login, enter username "tomsmith" and password "SuperSecretPassword!", click Login, and confirm you are logged in.',
     features: [
-      "Create & manage browser profiles",
+      "Browser profiles API",
       "Persist cookies & localStorage",
       "Resume authenticated sessions",
-      "Multi-step workflow continuity",
+      "No re-login needed",
+    ],
+    promptOptions: [
+      {
+        label: "1️⃣ Login & Save Profile",
+        description: "Login to the site and save cookies to a browser profile",
+        prompt:
+          'Navigate to https://the-internet.herokuapp.com/login, enter username "tomsmith" and password "SuperSecretPassword!", click Login, and confirm you are logged in.',
+        action: "login-and-save",
+      },
+      {
+        label: "2️⃣ Resume with Profile",
+        description: "Start a new session with the saved profile — already logged in without credentials",
+        prompt:
+          "Navigate to https://the-internet.herokuapp.com/secure and check if you are already logged in. Report what you see.",
+        action: "resume-with-profile",
+      },
     ],
     codeSnippets: [
       {

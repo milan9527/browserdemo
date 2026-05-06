@@ -1,6 +1,6 @@
 """
 AgentCore Runtime agent with Browser tool.
-Supports both default and custom browser identifiers (e.g. Web Bot Auth enabled).
+Supports custom browser identifiers and browser profiles for persistent sessions.
 """
 
 import os
@@ -41,18 +41,25 @@ app = BedrockAgentCoreApp()
 def handler(payload: dict) -> dict:
     prompt = payload.get("prompt", "")
     browser_identifier = payload.get("browser_identifier", DEFAULT_BROWSER_ID)
+    profile_id = payload.get("profile_id")
 
     if not prompt:
         return {"error": "prompt is required", "status": "error"}
 
     logger.info(f"Prompt: {prompt[:100]}...")
     logger.info(f"Browser identifier: {browser_identifier}")
+    if profile_id:
+        logger.info(f"Profile ID: {profile_id}")
 
     try:
         browser_tool = AgentCoreBrowser(
             region=REGION,
             identifier=browser_identifier,
         )
+
+        # If a profile_id is provided, patch create_browser_session to use it
+        if profile_id:
+            _patch_with_profile(browser_tool, profile_id)
 
         agent = Agent(
             system_prompt=SYSTEM_PROMPT,
@@ -75,3 +82,30 @@ def handler(payload: dict) -> dict:
     except Exception as e:
         logger.error(f"Agent error: {e}", exc_info=True)
         return {"status": "error", "error": str(e)}
+
+
+def _patch_with_profile(browser_tool: AgentCoreBrowser, profile_id: str):
+    """Patch AgentCoreBrowser.create_browser_session to start with a profile."""
+    from bedrock_agentcore.tools.browser_client import BrowserClient
+
+    original_create = browser_tool.create_browser_session
+
+    async def patched_create():
+        if not browser_tool._playwright:
+            raise RuntimeError("Playwright not initialized")
+
+        session_client = BrowserClient(region=browser_tool.region)
+        session_id = session_client.start(
+            identifier=browser_tool.identifier,
+            session_timeout_seconds=browser_tool.session_timeout,
+            profile_configuration={"profileIdentifier": profile_id},
+        )
+        logger.info(f"Started session with profile {profile_id}: {session_id}")
+
+        cdp_url, cdp_headers = session_client.generate_ws_headers()
+        browser = await browser_tool._playwright.chromium.connect_over_cdp(
+            endpoint_url=cdp_url, headers=cdp_headers
+        )
+        return browser
+
+    browser_tool.create_browser_session = patched_create
